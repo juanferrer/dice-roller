@@ -40,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ComparePoint.cs" />
+    <Compile Include="Die.cs" />
     <Compile Include="DieRoller.cs" />
   </ItemGroup>
   <ItemGroup>

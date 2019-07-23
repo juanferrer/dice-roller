@@ -40,7 +40,7 @@ namespace DiceRoller
             // Compound patterns
             notationPatterns[PatternType.NumberComparison] = $"({notationPatterns[PatternType.ComparisonOperator]})({notationPatterns[PatternType.NumberDecimal]})";
             notationPatterns[PatternType.Die] = $"([1-9]\\d*)?d([1-9]\\d*|%|{notationPatterns[PatternType.Fudge]})";
-            notationPatterns[PatternType.DieFull] = $"{notationPatterns[PatternType.Die]}{notationPatterns[PatternType.Explode]}?(?:${notationPatterns[PatternType.NumberComparison]})?";
+            notationPatterns[PatternType.DieFull] = $"{notationPatterns[PatternType.Die]}{notationPatterns[PatternType.Explode]}?(?:{notationPatterns[PatternType.NumberComparison]})?";
             notationPatterns[PatternType.Operation] = $"({notationPatterns[PatternType.ArithmeticOperator]})({notationPatterns[PatternType.NumberDecimal]}(?!\\d*d)|H|L)";
             notationPatterns[PatternType.Notation] = $"({notationPatterns[PatternType.ArithmeticOperator]})?{notationPatterns[PatternType.DieFull]}((?:{notationPatterns[PatternType.Operation]})*)";
         }
@@ -139,6 +139,46 @@ namespace DiceRoller
             return comparePoint.Operator != null ? CompareNumbers(value, comparePoint.Value, comparePoint.Operator) : false;
         }
 
+        public int RollDice(string notation)
+        {
+            int result = 0;
+
+            List<Die> dice = ParseNotation(notation);
+
+            return result;
+        }
+
+        private List<Die> ParseNotation(string notation)
+        {
+            List<Die> parsed = new List<Die>();
+            
+            if (!string.IsNullOrWhiteSpace(notation) && notation != "")
+            {
+                List<string> matches = Regex.Split(notation, "(\\(.*?\\))").ToList().Where(s => !String.IsNullOrWhiteSpace(s)).ToList();
+
+                for (int i = 0; i < matches.Count; ++i)
+                {
+                    if (matches[i][0] == '(')
+                    {
+                        matches[i] = matches[i].Replace("(", "").Replace(")", "");
+                        // This is a match within the parenthesis group (i.e. "3d6+2" in "(3d6+2)*4"
+                        // Recursively parse it in case it has nested parenthesis
+                        parsed.AddRange(ParseNotation(matches[i]));
+                    }
+                    else
+                    {
+                        // This is a match outside of a parenthesis group (i.e. the "+2" in "(3d6)+2", or "d6" in "(2d4+2)*d6")
+                        // or it could be that no parenthesis group exists (i.e. the whole notation in `3d6+2`)
+                        // This also happens when recursively parsing down to a level with no parenthesis
+
+                        // Split the notation by operator (include operators in the returned segments)
+                        string[] segments = Regex.Split(matches[i], $"({notationPatterns[PatternType.ArithmeticOperator]})");
+                    }
+                }
+
+            }
+            return parsed;
+        }
 
         private List<Die> ParseDice(string notation)
         {
@@ -146,10 +186,9 @@ namespace DiceRoller
             List<Die> parsed = new List<Die>();
             string pattern = notationPatterns[PatternType.Notation];
 
-            Regex regex = new Regex(pattern);
             Match notationMatch;
 
-            while ((notationMatch = regex.Match(notation)) != null)
+            while ((notationMatch = Regex.Match(notation, pattern)) != null)
             {
                 // Number of times to roll the die
                 int quantity = 1;
@@ -295,37 +334,6 @@ namespace DiceRoller
             }
 
             return dieRolls;
-        }
-
-        /// <summary>
-        /// Roll dice according to the specified string, then sum and return the result
-        /// </summary>
-        /// <param name="rollString">A string following the Dice notation: https://en.wikipedia.org/wiki/Dice_notation </param>
-        /// <returns></returns>
-        public int RollDice(string rollString/*, out string rollBreakdown*/)
-        {
-            int result = 0;
-
-            // Separate the roll string into parentheses groups
-            string[] parenthesesGroups = rollString.Split(new char[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
-
-            // Separate each parenthesesGroup into single rollable elements or modifiers (i.e. separate in arithmetic operations)
-            List<List<string>> rollableElements = new List<List<string>>();
-            parenthesesGroups.ToList<string>().ForEach(g =>
-            {
-                rollableElements.Add(Regex.Split(g, @"([+\-*\/])").Where(e => !string.IsNullOrEmpty(e)).ToList());
-            });
-
-            // Roll each element in each group and add the result
-            rollableElements.ForEach(group =>
-            {
-                group.ForEach(element =>
-                {
-
-                });
-            });
-
-            return result;
         }
     }
 }

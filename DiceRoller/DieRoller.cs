@@ -143,26 +143,31 @@ namespace DiceRoller
         {
             int result = 0;
 
-            List<Die> dice = ParseNotation(notation);
+            List<object> dice = ParseNotation(notation);
+
+            // At this point we have a list of dice (Die), numbers (int) and operators (string)
 
             return result;
         }
 
-        private List<Die> ParseNotation(string notation)
+        private List<object> ParseNotation(string notation)
         {
-            List<Die> parsed = new List<Die>();
+            List<object> parsed = new List<object>();
             
+            // Only continue if a notation was passed
             if (!string.IsNullOrWhiteSpace(notation) && notation != "")
             {
+                // Split the notation into its parenthesis groupings
                 List<string> matches = Regex.Split(notation, "(\\(.*?\\))").ToList().Where(s => !String.IsNullOrWhiteSpace(s)).ToList();
 
+                // Loop through each group and parse it
                 for (int i = 0; i < matches.Count; ++i)
                 {
                     if (matches[i][0] == '(')
                     {
-                        matches[i] = matches[i].Replace("(", "").Replace(")", "");
                         // This is a match within the parenthesis group (i.e. "3d6+2" in "(3d6+2)*4"
                         // Recursively parse it in case it has nested parenthesis
+                        matches[i] = matches[i].Replace("(", "").Replace(")", "");
                         parsed.AddRange(ParseNotation(matches[i]));
                     }
                     else
@@ -173,6 +178,30 @@ namespace DiceRoller
 
                         // Split the notation by operator (include operators in the returned segments)
                         string[] segments = Regex.Split(matches[i], $"({notationPatterns[PatternType.ArithmeticOperator]})");
+
+                        for (int j = 0; j < segments.Length; ++j)
+                        {
+                            // Determine if the segment is a die or not
+                            if (Regex.IsMatch(segments[j], notationPatterns[PatternType.DieFull]))
+                            {
+                                // This is a die. Parse it into an object and add it to the list
+                                var dice = ParseDie(segments[j]);
+                                dice.ForEach(die =>
+                                {
+                                    parsed.Add(die);
+                                });
+                            }
+                            else
+                            {
+                                // Not a die (i.e. number or operator)
+                                /*if (int.TryParse(segments[j], out _))
+                                {
+                                    parsed.Add(segments[j]);
+                                }*/
+                                parsed.Add(segments[j]);
+
+                            }                          
+                        }
                     }
                 }
 
@@ -180,7 +209,7 @@ namespace DiceRoller
             return parsed;
         }
 
-        private List<Die> ParseDice(string notation)
+        private List<Die> ParseDie(string notation)
         {
             // Parse the notation and find valid dice and any attributes
             List<Die> parsed = new List<Die>();

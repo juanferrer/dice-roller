@@ -55,8 +55,6 @@ namespace DiceRoller
             return randomEngine.Next(1, sides);
         }
 
-        delegate int RollDelegate(int sides);
-
         /// <summary>
         /// Roll a fudge die with the specified number of non-blank faces
         /// </summary>
@@ -85,6 +83,8 @@ namespace DiceRoller
 
             return total;
         }
+
+        delegate int RollDelegate(int sides);
 
         /// <summary>
         /// Compares a to b with the given operator
@@ -139,14 +139,83 @@ namespace DiceRoller
             return comparePoint.Operator != null ? CompareNumbers(value, comparePoint.Value, comparePoint.Operator) : false;
         }
 
-        public int RollDice(string notation)
-        {
-            int result = 0;
 
-            List<object> dice = ParseNotation(notation);
+        private RollResult CalculateResult(List<object> dice, string initialSymbol = "+")
+        {
+            string symbol = initialSymbol;
+            if (string.IsNullOrEmpty(initialSymbol))
+            {
+                symbol = "+";
+            }
+            int num = 0;
+
+            RollResult result = new RollResult();
 
             // At this point we have a list of dice (Die), numbers (int) and operators (string)
+            foreach (object element in dice)
+            {
+                if (element is List<object>)
+                {
+                    // It's a parenthesis group
+                    RollResult parenthesisGroup = CalculateResult(element as List<object>, symbol);
+                    result.RolledNotation += $"({parenthesisGroup.RolledNotation})";
+                    result.Result += parenthesisGroup.Result;
+                }
+                else if (element is Die)
+                {
+                    // It's a die, roll it
+                    List<int> rolls = RollDie((Die)element);
+                    num = rolls.Sum();
+                    result.RolledNotation += $"[{string.Join(",", rolls)}]";
+                }
+                // It's a string that encodes a number or an operator
+                else if (int.TryParse(element as string, out int temp))
+                {
+                    // It's a number
+                    num = temp;
+                    result.RolledNotation += num;
+                }
+                else
+                {
+                    symbol = element as string;
+                    result.RolledNotation += symbol;
+                }
 
+                if (symbol != "")
+                {
+                    // Use last operator to combine with result
+                    switch (symbol)
+                    {
+                        case ("+"):
+                            result.Result += num;
+                            break;
+                        case ("-"):
+                            result.Result -= num;
+                            break;
+                        case ("*"):
+                            result.Result *= num;
+                            break;
+                        case ("/"):
+                        case ("\\"):
+                            result.Result /= num;
+                            break;
+                        default:
+                            result.Result += num;
+                            break;
+                    }
+                    // And clear the last symbol
+                    symbol = "";
+                }
+            }
+
+            return result;
+        }
+
+        public RollResult RollDice(string notation)
+        {
+            List<object> dice = ParseNotation(notation);
+            RollResult result = CalculateResult(dice);
+            result.OriginalNotation = notation;
             return result;
         }
 
@@ -168,7 +237,7 @@ namespace DiceRoller
                         // This is a match within the parenthesis group (i.e. "3d6+2" in "(3d6+2)*4"
                         // Recursively parse it in case it has nested parenthesis
                         matches[i] = matches[i].Replace("(", "").Replace(")", "");
-                        parsed.AddRange(ParseNotation(matches[i]));
+                        parsed.Add(ParseNotation(matches[i]));
                     }
                     else
                     {
@@ -215,13 +284,15 @@ namespace DiceRoller
             List<Die> parsed = new List<Die>();
             string pattern = notationPatterns[PatternType.Notation];
 
-            Match notationMatch;
+            MatchCollection notationMatches;
+            notationMatches = Regex.Matches(notation, pattern);
 
-            while ((notationMatch = Regex.Match(notation, pattern)) != null)
+            for (int i = 0; i < notationMatches.Count; ++i)
             {
+                Match notationMatch = notationMatches[i];
                 // Number of times to roll the die
                 int quantity = 1;
-                if (notationMatch.Captures[2].Length > 0 && int.TryParse(notationMatch.Captures[2].Value, out int temp))
+                if (notationMatch.Groups[2].Length > 0 && int.TryParse(notationMatch.Groups[2].Value, out int temp))
                 {
                     quantity = temp;
                 }
@@ -229,13 +300,13 @@ namespace DiceRoller
                 // How many sides the die has
                 int sides = 0;
                 string sidesString = "";
-                if (int.TryParse(notationMatch.Captures[3].Value, out temp))
+                if (int.TryParse(notationMatch.Groups[3].Value, out temp))
                 {
                     sides = temp;
                 }
                 else
                 {
-                    sidesString = notationMatch.Captures[3].Value;
+                    sidesString = notationMatch.Groups[3].Value;
                 }
 
                 // If the number of sides was not a number it must been a fudge die (or a percentage, but we'll check that later)
@@ -246,25 +317,25 @@ namespace DiceRoller
                     fudge = Regex.IsMatch(sidesString, notationPatterns[PatternType.Fudge]);
                     if (fudge)
                     {
-                        fudgeString = Regex.Match(sidesString, notationPatterns[PatternType.Fudge]).Captures[0].Value;
+                        fudgeString = Regex.Match(sidesString, notationPatterns[PatternType.Fudge]).Groups[0].Value;
                     }
                 }
 
                 // Whether to explode the dice rolls
-                bool explode = notationMatch.Captures[5].Length > 0;
+                bool explode = notationMatch.Groups[5].Length > 0;
 
                 // Whether to penetrate the dice rolls
-                bool penetrate = new string[] { "!p", "!!p" }.Contains(notationMatch.Captures[5].Value);
+                bool penetrate = new string[] { "!p", "!!p" }.Contains(notationMatch.Groups[5].Value);
 
                 // Whether to compound exploding dice rolls
-                bool compound = new string[] { "!!", "!!p" }.Contains(notationMatch.Captures[5].Value);
+                bool compound = new string[] { "!!", "!!p" }.Contains(notationMatch.Groups[5].Value);
 
                 // The compare point for exploding/penetrating dice
                 ComparePoint comparePoint = new ComparePoint();
-                if (notationMatch.Captures[6].Length > 0)
+                if (notationMatch.Groups[6].Length > 0)
                 {
-                    comparePoint.Operator = notationMatch.Captures[6].Value;
-                    if (!int.TryParse(notationMatch.Captures[7].Value, out comparePoint.Value))
+                    comparePoint.Operator = notationMatch.Groups[6].Value;
+                    if (!int.TryParse(notationMatch.Groups[7].Value, out comparePoint.Value))
                     {
                         comparePoint.Value = 0;
                     }
@@ -346,7 +417,8 @@ namespace DiceRoller
                          roll = callback.Invoke(sides);
 
                         // Add the roll to our list
-                        rerolls[rerollIndex] = rerolls[rerollIndex] + roll;
+                        //rerolls[rerollIndex] = rerolls[rerollIndex] + roll;
+                        rerolls.Add(roll);
 
                         // Subtract 1 from penetrated rolls (only consecutive rolls, after initial roll are not subtracted)
                         if (die.Penetrate && rollCount > 0)

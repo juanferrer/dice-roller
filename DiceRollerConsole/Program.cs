@@ -11,7 +11,11 @@ namespace DiceRollerConsole
         static void Main(string[] args)
         {
             DiceRoller.DiceRoller diceRoller = new DiceRoller.DiceRoller();
-            diceRoller.RollDice("(1d6+2)*3+2d4");
+            DiceRoller.RollResult result;
+            result = diceRoller.RollDice("(1d6+2)*3+2d4");
+            //result = diceRoller.RollDice("1d6+2");
+            //result = diceRoller.RollDice("4d6-L");
+            Console.WriteLine(result);
         }
     }
 }

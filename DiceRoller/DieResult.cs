@@ -10,6 +10,6 @@ namespace DiceRoller
     {
         public string OriginalNotation;
         public string RolledNotation;
-        public int Result;
+        public double Result;
     }
 }

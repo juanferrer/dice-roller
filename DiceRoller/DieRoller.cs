@@ -52,7 +52,7 @@ namespace DiceRoller
         /// <returns></returns>
         private int Standard(int sides)
         {
-            return randomEngine.Next(1, sides);
+            return randomEngine.Next(1, sides + 1);
         }
 
         /// <summary>
@@ -66,11 +66,14 @@ namespace DiceRoller
 
             if (numNonBlanks == 2)
             {
-                total = randomEngine.Next(1, 3) - 2;
+                // Default fudge, 2 of each non-blank (1d3 - 2)
+                total = randomEngine.Next(1, 4) - 2;
             }
             else if (numNonBlanks == 1)
             {
-                int num = randomEngine.Next(1, 6);
+                // Only 1 of each non-blank
+                // On a 1d6 a roll of 1 = -1, 6 = +1, others = 0
+                int num = randomEngine.Next(1, 7);
                 if (num == 1)
                 {
                     total = -1;
@@ -181,7 +184,7 @@ namespace DiceRoller
                     result.RolledNotation += symbol;
                 }
 
-                if (symbol != "")
+                if (symbol != "" && num != 0)
                 {
                     // Use last operator to combine with result
                     switch (symbol)
@@ -205,6 +208,7 @@ namespace DiceRoller
                     }
                     // And clear the last symbol
                     symbol = "";
+                    num = 0;
                 }
             }
 
@@ -383,7 +387,7 @@ namespace DiceRoller
                 callback = this.Fudge;
 
                 // Set the sides to the correct value for the fudge type
-                if (!int.TryParse(die.FudgeString[1].ToString(), out sides))
+                if (die.FudgeString.Length < 2 || !int.TryParse(die.FudgeString[1].ToString(), out sides))
                 {
                     // Well, it's not a number. Use default
                     sides = 2;

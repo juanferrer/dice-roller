@@ -12,10 +12,11 @@ namespace DiceRollerConsole
         {
             DiceRoller.DiceRoller diceRoller = new DiceRoller.DiceRoller();
             DiceRoller.RollResult result;
-            result = diceRoller.RollDice("(1d6+2)*3+2d4");
-            //result = diceRoller.RollDice("1d6+2");
+            //result = diceRoller.RollDice("(1d6+2)*3+2d4");
+            result = diceRoller.RollDice("1d6+2");
             //result = diceRoller.RollDice("4d6-L");
-            Console.WriteLine(result);
+            //result = diceRoller.RollDice("10dF");
+            Console.WriteLine(result.Result);
         }
     }
 }

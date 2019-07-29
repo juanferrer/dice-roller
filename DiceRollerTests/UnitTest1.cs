@@ -33,7 +33,7 @@ namespace DiceRollerTests
         public void DiceRollerInitialize()
         {
             General.Prepare();
-        }        
+        }
 
         [TestMethod]
         public void Die2()
@@ -191,7 +191,7 @@ namespace DiceRollerTests
         [TestMethod]
         public void DicePlus()
         {
-            General.RollTest("2d6+2", @"\[\d\]\+2", 4, 14);
+            General.RollTest("2d6+2", @"\[\d,\d\]\+2", 4, 14);
         }
 
         [TestMethod]
@@ -210,6 +210,40 @@ namespace DiceRollerTests
         public void DieDivided()
         {
             General.RollTest("1d2/2", @"\[[12]\]\/2", 0.5, 1);
+        }
+
+        [TestMethod]
+        public void ExplodingDie()
+        {
+            General.RollTest("2d4!", @"\[\d(!?,\d)*?\]", 2, int.MaxValue);
+        }
+
+        [TestMethod]
+        public void PenetratingDie()
+        {
+            General.RollTest("1d4!p", @"\[\d((!p)?,\d)*?\]", 2, int.MaxValue);
+        }
+
+        [TestMethod]
+        public void CompoundExplodingDie()
+        {
+            General.RollTest("4d6!!", @"\[\d*?((!!)?,\d*?)*?\]", 4, int.MaxValue);
+        }
+
+        [TestMethod]
+        public void CompoundPenetratingDie()
+        {
+            General.RollTest("3d8!!p", @"\[\d*?((!!p)?,\d*?)*?\]", 2, int.MaxValue);
+        }
+    }
+
+    [TestClass]
+    public class CompositeDice
+    {
+        [TestInitialize]
+        public void DiceRollerInitialize()
+        {
+            General.Prepare();
         }
     }
 }

@@ -167,9 +167,77 @@ namespace DiceRoller
                 else if (element is Die)
                 {
                     // It's a die, roll it
-                    List<int> rolls = RollDie((Die)element);
+                    Die d = (Die)element;
+                    List<int> rolls = RollDie(d);
                     num = rolls.Sum();
-                    result.RolledNotation += $"[{string.Join(",", rolls)}]";
+                    string rollNotation = "[";
+                    int compoundSum = 0;
+
+                    if (d.Explode || d.Penetrate)
+                    { 
+                        for (int i = 0; i < rolls.Count; ++i)
+                        {
+                            // Write comma if needed
+                            if (i > 0)
+                            {
+                                if (d.Compound)
+                                {
+                                    if (!IsComparePoint(d.ComparePoint, rolls[i - 1]))
+                                    {
+                                        // Die is exploding/penetrating and last number did not match compare point, add a comma because this is a different roll
+                                        rollNotation += ",";
+                                    }
+                                }
+                                else
+                                {
+                                    // There was a number before, add a coma
+                                    rollNotation += ",";
+                                }
+                            }
+
+                            if (!d.Compound)
+                            {
+                                // Write every number
+                                rollNotation += rolls[i].ToString();
+                            }
+                            else
+                            {
+                                // Sum the number, we'll write it when the number doesn't match the compare point (last roll of the chain)
+                                compoundSum += rolls[i];
+                            }
+                            // Die continues exploding/penetrating and is not compount
+                            if (!d.Compound && IsComparePoint(d.ComparePoint, rolls[i]))
+                            {
+                                // It matches the compare point, add explode/penetrate symbol
+                                rollNotation += d.Explode ? "!" : "!p";
+                            }
+                            else if (d.Compound && !IsComparePoint(d.ComparePoint, rolls[i]))
+                            {
+                                // Compound dice has finished exploding/penetrating, write number sum and add appropriate symbol
+                                rollNotation += compoundSum.ToString();
+                                if (compoundSum > d.Sides)
+                                {
+                                    rollNotation += d.Explode ? "!!" : "!!p";
+                                }
+                                compoundSum = 0;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Do a simple parsing of the rolls
+                        rollNotation += string.Join(",", rolls);
+                    }
+
+
+                    rollNotation += "]";
+
+                    if (d.Compound)
+                    {
+                        // Instead replace
+                    }
+
+                    result.RolledNotation += rollNotation;
                 }
                 // It's a string that encodes a number or an operator
                 else if (int.TryParse(element as string, out int temp))

@@ -1,8 +1,8 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Text.RegularExpressions;
 using DiceRoller;
-using System.Text.RegularExpressions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace DiceRollerTests
+namespace DiceRollerUnitTests
 {
     public static class General
     {
